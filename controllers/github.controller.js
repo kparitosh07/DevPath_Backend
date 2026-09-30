@@ -94,10 +94,9 @@ export const getRepositoryAnalysisData = async (req, res) => {
         },
 
         languages: data.languages,
-
         topics: data.topics,
-
         readme: data.readme,
+        dependencies: data.dependencies,
       },
     });
   } catch (error) {
