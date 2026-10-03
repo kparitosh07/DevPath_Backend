@@ -90,43 +90,65 @@ export const getRepositoryDetails = async (userId, owner, repo) => {
         "X-GitHub-Api-Version": "2022-11-28",
     };
 
-    const [repository, languages, topics, readmeResponse, packageJson, requirementsTxt, pyprojectToml] = await Promise.all([
-        axios.get(
-            `https://api.github.com/repos/${owner}/${repo}`,
-            { headers }
-        ),
-        axios.get(
+    const repositoryResponse = await axios.get(
+        `https://api.github.com/repos/${owner}/${repo}`,
+        { headers }
+    );
+
+    let languages = {};
+
+    try {
+        const response = await axios.get(
             `https://api.github.com/repos/${owner}/${repo}/languages`,
             { headers }
-        ),
+        );
+        languages = response.data || {};
 
-        axios.get(
+    } catch (error) {
+        console.warn(`Language extraction failed for ${owner}/${repo}`, error.message);
+    }
+
+    let topics = [];
+
+    try {
+        const response = await axios.get(
             `https://api.github.com/repos/${owner}/${repo}/topics`,
             { headers }
-        ),
+        );
+        topics = response.data?.names || [];
 
-        axios.get(
+    } catch (error) {
+        console.warn(`Topic extraction failed for ${owner}/${repo}`, error.message);
+    }
+
+    let readme = null;
+
+    try {
+        const response = await axios.get(
             `https://api.github.com/repos/${owner}/${repo}/readme`,
             { headers }
-        ),
-    ]);
+        );
 
-    let readme = "";
+        if (response.data?.content) {
+            readme = Buffer.from(response.data.content, "base64").toString();
+        }
 
-    if (readmeResponse.data?.content) {
-        readme = Buffer.from(
-            readmeResponse.data.content,
-            "base64"
-        ).toString();
+    } catch (error) {
+        if(error.response?.status === 404){
+            console.log(`Readme not found: ${owner}/${repo}:`,error.message);
+        }
+        else{
+            console.warn(`Readme extraction failed for ${owner}/${repo}:`,error.message);
+        }
     }
-    
-    const dependencyFiles = await findDependencyFiles(owner,repo,user.githubAccessToken);
-    const dependencies = await getDependencyFiles(owner,repo,user.githubAccessToken,dependencyFiles);
+
+    const dependencyFiles = await findDependencyFiles(owner, repo, user.githubAccessToken);
+    const dependencies = await getDependencyFiles(owner, repo, user.githubAccessToken, dependencyFiles);
 
     return {
-        repository: repository.data,
-        languages: languages.data,
-        topics: topics.data.names || [],
+        repository: repositoryResponse.data,
+        languages,
+        topics,
         readme,
         dependencies,
     };
