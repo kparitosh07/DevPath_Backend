@@ -1,4 +1,5 @@
 import {getGithubProfile,getGithubRepositories,getRepositoryDetails} from "../services/github/github.service.js";
+import {syncUserRepositories,} from "../services/github/repository.service.js";
 
 export const getProfile = async (req, res) => {
   try {
@@ -110,4 +111,26 @@ export const getRepositoryAnalysisData = async (req, res) => {
       message: "Failed to fetch repository analysis data",
     });
   }
+};
+
+export const syncRepositories = async (req, res) => {
+    try {
+        const repositories = await syncUserRepositories(req.user.userId);
+
+        return res.status(200).json({
+            success: true,
+            message: "Repositories synchronized successfully",
+            data: {
+                count: repositories.length,
+                repositories,
+            },
+        });
+
+    } catch (error) {
+        console.error("Repository sync error:",error.message);
+        return res.status(500).json({
+            success: false,
+            message: "Failed to synchronize repositories",
+        });
+    }
 };
