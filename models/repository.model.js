@@ -110,38 +110,10 @@ const repositorySchema = new mongoose.Schema(
             },
         },
 
-        skills: {
-            type: [
-                {
-                    name: {
-                        type: String,
-                        required: true,
-                    },
-
-                    confidence: {
-                        type: Number,
-                        min: 0,
-                        max: 1,
-                    },
-
-                    source: {
-                        type: String,
-                        default: "",
-                    },
-                },
-            ],
-            default: [],
-        },
-
         lastSyncedAt: {
             type: Date,
             default: null,
-        },
-
-        lastAnalyzedAt: {
-            type: Date,
-            default: null,
-        },
+        }
     },
     {
         timestamps: true,
@@ -158,6 +130,6 @@ repositorySchema.index(
     }
 );
 
-const Repository = mongoose.model("Repository",repositorySchema);
+const Repository = mongoose.model("Repository", repositorySchema);
 
 export default Repository;

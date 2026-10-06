@@ -14,6 +14,16 @@ const skillSchema = new mongoose.Schema(
       max: 1,
       default: 0,
     },
+
+    source: {
+      type: String,
+      default: "hybrid",
+    },
+
+    evidence: {
+      type: [String],
+      default: [],
+    },
   },
   { _id: false }
 );
