@@ -3,6 +3,7 @@ import cors from "cors";
 import authRoutes from "./routes/auth.routes.js";
 import authMiddleware from "./middleware/auth.middleware.js";
 import githubRoutes from "./routes/github.routes.js";
+import issueRoutes from "./routes/issue.routes.js";
 
 const app = express();
 
@@ -15,6 +16,7 @@ app.use(
 app.use(express.json());
 app.use("/api/auth", authRoutes);
 app.use("/api/github", githubRoutes);
+app.use("/api/issues",issueRoutes);
 
 app.get("/api/health", (req, res) => {
   res.json({
