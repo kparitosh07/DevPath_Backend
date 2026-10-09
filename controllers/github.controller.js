@@ -1,9 +1,13 @@
+import User from "../models/user.model.js";
 import {getGithubProfile,getGithubRepositories,getRepositoryDetails} from "../services/github/github.service.js";
 import {syncUserRepositories,} from "../services/github/repository.service.js";
 
 export const getProfile = async (req, res) => {
   try {
     const profile = await getGithubProfile(req.user.userId);
+    const storedUser = await User.findById(req.user.userId)
+      .select("skills skillsAnalyzedAt")
+      .lean();
 
     res.json({
       success: true,
@@ -18,6 +22,8 @@ export const getProfile = async (req, res) => {
         followers: profile.followers,
         following: profile.following,
         profileUrl: profile.html_url,
+        skills: storedUser?.skills || [],
+        skillsAnalyzedAt: storedUser?.skillsAnalyzedAt || null,
       },
     });
   } catch (error) {

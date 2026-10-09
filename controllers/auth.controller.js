@@ -18,11 +18,12 @@ export const githubCallback = async (req, res) => {
   try {
     const { code } = req.query;
 
+    const frontendURL = process.env.FRONTEND_URL || "http://localhost:5173";
+
     if (!code) {
-      return res.status(400).json({
-        success: false,
-        message: "GitHub authorization code missing",
-      });
+      return res.redirect(
+        `${frontendURL}/?authError=${encodeURIComponent("GitHub authorization code missing")}`
+      );
     }
 
     const tokenResponse = await axios.post(
@@ -43,10 +44,9 @@ export const githubCallback = async (req, res) => {
     const accessToken = tokenResponse.data.access_token;
 
     if (!accessToken) {
-      return res.status(400).json({
-        success: false,
-        message: "Unable to get GitHub access token",
-      });
+      return res.redirect(
+        `${frontendURL}/?authError=${encodeURIComponent("Unable to get GitHub access token")}`
+      );
     }
 
     const githubUserResponse = await axios.get(
@@ -95,27 +95,19 @@ export const githubCallback = async (req, res) => {
       }
     );
 
-    return res.json({
-      success: true,
-      message: "GitHub login successful",
-      token,
-      user: {
-        id: user._id,
-        githubId: user.githubId,
-        username: user.username,
-        name: user.name,
-        avatar: user.avatar,
-      },
-    });
+    return res.redirect(
+      `${frontendURL}/?token=${encodeURIComponent(token)}`
+    );
   } catch (error) {
     console.error(
       "GitHub OAuth Error:",
       error.response?.data || error.message
     );
 
-    return res.status(500).json({
-      success: false,
-      message: "GitHub authentication failed",
-    });
+    const frontendURL = process.env.FRONTEND_URL || "http://localhost:5173";
+
+    return res.redirect(
+      `${frontendURL}/?authError=${encodeURIComponent("GitHub authentication failed")}`
+    );
   }
 };
