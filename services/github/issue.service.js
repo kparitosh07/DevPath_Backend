@@ -78,7 +78,7 @@ export const searchRelevantIssues = async (
     const topSkills = skills
         .filter(
             (skill) =>
-                skill.confidence >= 0.5
+                skill.confidence >= 0.25
         )
         .sort(
             (a, b) =>
