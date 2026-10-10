@@ -1,7 +1,7 @@
 import axios from "axios";
 import Issue from "../../models/issue.model.js";
 import User from "../../models/user.model.js";
-import { rankIssues, } from "./issueRanker.service.js";
+import { getMLIssueRecommendations } from "../ml/ml.service.js";
 
 const getGithubToken = async (userId) => {
     const user = await User.findById(userId)
@@ -139,27 +139,65 @@ export const searchRelevantIssues = async (
     }
 
     const uniqueIssues = [...issueMap.values()];
+    const candidates = uniqueIssues.slice(0, 50);
 
-    const rankedIssues = rankIssues(uniqueIssues, topSkills);
-    const selectedIssues = rankedIssues.slice(0, 15);
+    if (!candidates.length) {
+        return [];
+    }
+
+    const student = {
+        skills: skills.map((skill) => ({
+            name: skill.name,
+            confidence: skill.confidence || 0,
+            evidence: skill.evidence || [],
+            source: skill.source || "",
+        })),
+    };
+
+    const mlIssues = candidates.map((issue) => ({
+        id: String(issue.id),
+        title: issue.title || "",
+        description: issue.body || "",
+        labels: (issue.labels || []).map((label) =>
+            typeof label === "string" ? label : label.name
+        ),
+        technologies: [],
+        difficulty: "unknown",
+        repository_language: "",
+    }));
+
+    const mlResult = await getMLIssueRecommendations({
+        student,
+        issues: mlIssues,
+    });
+
+    const recommendations = mlResult.recommendations || [];
+    const candidateMap = new Map(
+        candidates.map((issue) => [String(issue.id), issue])
+    );
+
+    const selectedRecommendations = recommendations
+        .map((recommendation) => ({
+            recommendation,
+            issue: candidateMap.get(String(recommendation.issueId)),
+        }))
+        .filter((item) => item.issue)
+        .slice(0, 15);
+
     const savedIssues = [];
-    for (const issue of selectedIssues) {
+
+    for (const { recommendation, issue } of selectedRecommendations) {
         try {
-            const labels =
-                issue.labels?.map(
-                    (label) =>
-                        typeof label === "string"
-                            ? label
-                            : label.name
-                ) || [];
+            const labels = (issue.labels || []).map((label) =>
+                typeof label === "string" ? label : label.name
+            );
 
             const savedIssue = await Issue.findOneAndUpdate(
+                { githubId: issue.id },
                 {
                     githubId: issue.id,
-                },
-                {
-                    githubId: issue.id,
-                    repositoryFullName: issue.repository_url?.split("/repos/")[1] || "",
+                    repositoryFullName:
+                        issue.repository_url?.split("/repos/")[1] || "",
                     title: issue.title || "",
                     description: issue.body || "",
                     url: issue.html_url || "",
@@ -170,12 +208,16 @@ export const searchRelevantIssues = async (
                         username: issue.user?.login || "",
                         avatar: issue.user?.avatar_url || "",
                     },
-
                     createdAtGithub: issue.created_at,
                     updatedAtGithub: issue.updated_at,
                     comments: issue.comments || 0,
-                    relevanceScore: issue.relevanceScore || 0,
-                    matchedSkills: issue.matchedSkills || [],
+
+                    relevanceScore: Math.round(
+                        (recommendation.score || 0) * 100
+                    ),
+                    matchedSkills: recommendation.matchedSkills || [],
+                    missingSkills: recommendation.missingSkills || [],
+                    recommendationReason: recommendation.reason || "",
                     lastSyncedAt: new Date(),
                 },
                 {
@@ -186,7 +228,6 @@ export const searchRelevantIssues = async (
             );
 
             savedIssues.push(savedIssue);
-
         } catch (error) {
             console.error(
                 `Failed to save issue ${issue.id}:`,
@@ -194,6 +235,7 @@ export const searchRelevantIssues = async (
             );
         }
     }
+
     return savedIssues;
 };
 

@@ -80,6 +80,16 @@ const issueSchema = new mongoose.Schema(
             default: [],
         },
 
+        missingSkills: {
+            type: [String],
+            default: [],
+        },
+
+        recommendationReason: {
+            type: String,
+            default: "",
+        },
+
         lastSyncedAt: {
             type: Date,
             default: null,
